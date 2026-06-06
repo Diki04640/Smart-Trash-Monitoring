@@ -14,7 +14,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // === UPDATE: Menambahkan properti "lokasi" pada inisialisasi default data ===
 const statusStore = {
-  "Tong1": { id: "Tong1", lokasi: "LT2 Indobaru", latitude: 1.119611, longitude: 104.043722, level: 15, updated_at: new Date().toISOString() },
+  "Tong1": { id: "Tong1", lokasi: "Kost Mitra", latitude: 1.119611, longitude: 104.043722, level: 15, updated_at: new Date().toISOString() },
   "Tong2": { id: "Tong2", lokasi: "Gedung A Lantai 1", latitude: 1.120500, longitude: 104.044500, level: 30, updated_at: new Date().toISOString() },
   "Tong3": { id: "Tong3", lokasi: "Gedung B Parkiran", latitude: 1.118500, longitude: 104.042500, level: 50, updated_at: new Date().toISOString() }
 };

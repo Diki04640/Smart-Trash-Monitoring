@@ -12,10 +12,11 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
+// === UPDATE: Menambahkan properti "lokasi" pada inisialisasi default data ===
 const statusStore = {
-  "Tong1": { id: "Tong1", latitude: 1.119611, longitude: 104.043722, level: 15, updated_at: new Date().toISOString() },
-  "Tong2": { id: "Tong2", latitude: 1.120500, longitude: 104.044500, level: 30, updated_at: new Date().toISOString() },
-  "Tong3": { id: "Tong3", latitude: 1.118500, longitude: 104.042500, level: 50, updated_at: new Date().toISOString() }
+  "Tong1": { id: "Tong1", lokasi: "LT2 Indobaru", latitude: 1.119611, longitude: 104.043722, level: 15, updated_at: new Date().toISOString() },
+  "Tong2": { id: "Tong2", lokasi: "Gedung A Lantai 1", latitude: 1.120500, longitude: 104.044500, level: 30, updated_at: new Date().toISOString() },
+  "Tong3": { id: "Tong3", lokasi: "Gedung B Parkiran", latitude: 1.118500, longitude: 104.042500, level: 50, updated_at: new Date().toISOString() }
 };
 
 const MAX_ITEMS = 100;
@@ -25,8 +26,8 @@ let wsConnectedClients = new Set();
 app.get('/api/status', (req, res) => {
   try {
     const data = Object.values(statusStore).sort((a, b) => 
-    a.id.localeCompare(b.id, undefined, {numeric: true, sensitivity: 'base'})
-);
+      a.id.localeCompare(b.id, undefined, {numeric: true, sensitivity: 'base'})
+    );
     res.json({ success: true, data, count: data.length });
   } catch (error) {
     console.error('Error GET /api/status:', error);
@@ -41,7 +42,8 @@ app.post('/api/status', (req, res) => {
     const results = [];
 
     payload.forEach(item => {
-      const { id, latitude, longitude, level } = item;
+      // === UPDATE: Destructuring mengambil 'lokasi' dari ESP8266 ===
+      const { id, lokasi, latitude, longitude, level } = item;
 
       if (!id) return;
 
@@ -51,6 +53,8 @@ app.post('/api/status', (req, res) => {
 
       const record = {
         id: String(id).trim(),
+        // === UPDATE: Validasi jika nama lokasi kosong, berikan teks default ===
+        lokasi: lokasi ? String(lokasi).trim() : "Lokasi Tidak Diketahui",
         latitude: (lat && lat !== 0) ? lat : 1.119611,
         longitude: (lng && lng !== 0) ? lng : 104.043722,
         level: Number.isFinite(level) ? Math.max(0, Math.min(100, Math.round(level))) : 0,
@@ -61,9 +65,10 @@ app.post('/api/status', (req, res) => {
       statusStore[record.id] = record;
       results.push(record);
 
-      console.log(`[${record.updated_at}] ${record.id}: Lvl ${record.level}% | Pos: ${record.latitude}, ${record.longitude}`);
+      // === UPDATE: Menampilkan nama lokasi di log console server ===
+      console.log(`[${record.updated_at}] ${record.id} (${record.lokasi}): Lvl ${record.level}% | Pos: ${record.latitude}, ${record.longitude}`);
       
-      // Kirim ke Dashboard secara Real-time
+      // Kirim ke Dashboard secara Real-time via WebSocket
       broadcastUpdate(record);
     });
 
@@ -124,7 +129,7 @@ wss.on('connection', (ws) => {
   // Send initial data
   const initialData = Object.values(statusStore).sort((a, b) => 
     new Date(b.updated_at) - new Date(a.updated_at)
-);
+  );
   
   ws.send(JSON.stringify({
     type: 'init',
@@ -147,10 +152,6 @@ wss.on('connection', (ws) => {
 server.listen(port, '0.0.0.0', () => {
   console.log(`\n╔════════════════════════════════════════════════╗`);
   console.log(`║     Smart Trash Monitor - Server Ready        ║`);
-  console.log(`║     http://localhost:${port}`);
-  console.log(`║     WS:  ws://localhost:${port}`);
-  console.log(`║     POST: http://localhost:${port}/api/status`);
-  console.log(`║     GET:  http://localhost:${port}/api/status`);
   console.log(`╚════════════════════════════════════════════════╝\n`);
 });
 

@@ -54,7 +54,6 @@ function loadMapTheme(isDark) {
 }
 
 function connectWS() {
-    // alamat WS dengan backend 
     const protocol = window.location.protocol === "https:" ? "wss" : "ws";
     const wsUrl = `${protocol}://${window.location.host}`;
     const ws = new WebSocket(wsUrl);
@@ -98,25 +97,27 @@ function render() {
     renderMap(data);
 
     // NOTIFIKASI //
-data.forEach(item => {
-    if (item.level >= 80) {
-        // Cek apakah sudah pernah dinotifikasi sebelumnya
-        if (!notifiedFull[item.id]) {
-            if (Notification.permission === "granted") {
-                const n = new Notification("Kapasitas Penuh!", {
-                    body: `${item.id} sudah mencapai ${item.level}%`,
-                    icon: "https://cdn-icons-png.flaticon.com/512/565/565547.png"
-                });
-                setTimeout(n.close.bind(n), 5000); 
+    data.forEach(item => {
+        const lokasiText = item.lokasi ? item.lokasi : "Lokasi Tidak Diketahui";
+        if (item.level >= 80) {
+            // Cek apakah sudah pernah dinotifikasi sebelumnya
+            if (!notifiedFull[item.id]) {
+                if (Notification.permission === "granted") {
+                    // === UPDATE: Menyisipkan info lokasi di Push Notification ===
+                    const n = new Notification(`${item.id} Penuh!`, {
+                        body: `Lokasi: ${lokasiText}\nKapasitas sudah mencapai ${item.level}%`,
+                        icon: "https://cdn-icons-png.flaticon.com/512/565/565547.png"
+                    });
+                    setTimeout(n.close.bind(n), 5000); 
+                }
+                // Tandai sudah dinotifikasi agar tidak muncul terus-menerus
+                notifiedFull[item.id] = true;
             }
-            // Tandai sudah dinotifikasi agar tidak muncul terus-menerus
-            notifiedFull[item.id] = true;
+        } else {
+            // Agar jika penuh lagi di masa depan, notifikasi bisa muncul kembali.
+            notifiedFull[item.id] = false;
         }
-    } else {
-        // Agar jika penuh lagi di masa depan, notifikasi bisa muncul kembali.
-        notifiedFull[item.id] = false;
-    }
-});
+    });
 }
 
 function renderStats(data) {
@@ -138,14 +139,15 @@ function renderStats(data) {
         statusEl.innerText = "-";
         statusEl.style.color = "gray";
     } else if (fullBins.length > 0) {
-        // Jika ada yang penuh, ambil semua ID-nya dan gabungkan
-        const ids = fullBins.map(b => b.id).join(", ");
+        // Jika ada yang penuh, ambil semua ID-nya dan gabungkan beserta lokasinya
+        const infoPenuh = fullBins.map(b => {
+            const loc = b.lokasi ? ` (${b.lokasi})` : '';
+            return `${b.id}${loc}`;
+        }).join(", ");
         
-        // Ubah teks menjadi informasi spesifik, misal: "Tong1 Penuh"
-        statusEl.innerText = `${ids} PENUH`; 
+        statusEl.innerText = `${infoPenuh} PENUH`; 
         statusEl.style.color = "#ef4444";
     } else {
-        // Jika tidak ada yang mencapai 80%, kembali ke status AMAN
         statusEl.innerText = "AMAN";
         statusEl.style.color = "#22c55e";
     }
@@ -155,26 +157,33 @@ function renderList(data) {
     const list = document.getElementById("list");
     list.innerHTML = "";
 
-    // Di dalam renderList(data)
     data.forEach(item => {
-    const div = document.createElement("div");
-    // class tambahan untuk notifikasi
-    div.className = "item " + (item.level >= 80 ? "full-alert" : "safe-status");
-    
-
+        const div = document.createElement("div");
+        div.className = "item " + (item.level >= 80 ? "full-alert" : "safe-status");
+        
         const idLabel = document.createElement("strong");
         idLabel.textContent = 'Id: ' + item.id;
 
-
         const info = document.createElement("div");
+
+        // === UPDATE: Membuat elemen teks lokasi di dalam Card List ===
+        const lokasiText = item.lokasi ? item.lokasi : "Lokasi Tidak Diketahui";
+        const locationEl = document.createElement("div");
+        locationEl.className = "item-location";
+        locationEl.innerHTML = `📍 <span style="font-weight: 600;">${lokasiText}</span>`;
+        locationEl.style.fontSize = "0.85rem";
+        locationEl.style.color = "var(--text-muted, #7f8c8d)";
+        locationEl.style.margin = "3px 0";
 
         const levelText = document.createElement("div");
         levelText.textContent = `Level: ${item.level}%`;
+        levelText.style.fontWeight = "bold";
 
         const timeText = document.createElement("small");
-            timeText.textContent =
-            "Update: " + formatTimeAgo(item.updated_at);
+        timeText.textContent = "Update: " + formatTimeAgo(item.updated_at);
 
+        // Susun elemen info komponen kanan
+        info.appendChild(locationEl); // Masukkan lokasi ke dalam card
         info.appendChild(levelText);
         info.appendChild(timeText);
 
@@ -185,9 +194,10 @@ function renderList(data) {
 }
 
 function formatTimeAgo(timestamp) {
+    if (!timestamp) return "Data belum masuk";
     const diff = Math.floor(
-    (Date.now() - new Date(timestamp).getTime()) / 1000
-);
+        (Date.now() - new Date(timestamp).getTime()) / 1000
+    );
 
     if (diff < 5) return "Baru saja";
     if (diff < 60) return diff + " detik lalu";
@@ -198,14 +208,19 @@ function formatTimeAgo(timestamp) {
 
 function renderMap(data) {
     data.forEach(item => {
-        const isFull = item.level >= 80; // Simpan status penuh dalam boolean
+        const isFull = item.level >= 80; 
         const color = isFull ? "#ef4444" : "#22c55e";
         const coords = [item.latitude, item.longitude];
         
+        // === UPDATE: Memasukkan informasi lokasi ke popup Map Leaflet ===
+        const lokasiText = item.lokasi ? item.lokasi : "Lokasi Tidak Diketahui";
         const popupContent = `
-            Id: <b>${item.id}</b><br>
-            Level: ${item.level}%<br>
-            Status: ${isFull ? "PENUH" : "AMAN"}
+            <div style="font-family: 'Inter', sans-serif; font-size: 13px; line-height: 1.4;">
+                Id: <b>${item.id}</b><br>
+                Lokasi: <b>${lokasiText}</b><br>
+                Level: <span style="font-weight: bold; color: ${color}">${item.level}%</span><br>
+                Status: <span style="font-weight: bold; color: ${color}">${isFull ? "PENUH" : "AMAN"}</span>
+            </div>
         `;
 
         if (markers[item.id]) {
@@ -215,7 +230,6 @@ function renderMap(data) {
                 .setStyle({ color: color, fillColor: color })
                 .getPopup().setContent(popupContent);
             
-            // Fokus otomatis hanya untuk Tong1 jika diperlukan
             if (item.id === "Tong1") {
                 map.panTo(coords, { animate: true });
             }
@@ -225,6 +239,7 @@ function renderMap(data) {
             markers[item.id] = L.circleMarker(coords, {
                 radius: 10,
                 color: color,
+                fillColor: color,
                 fillOpacity: 0.8,
                 weight: 2
             }).addTo(map).bindPopup(popupContent);
@@ -232,17 +247,14 @@ function renderMap(data) {
         
         // --- LOGIKA POPUP OTOMATIS ---
         if (isFull) {
-            // Jika penuh, buka popup
             if (!markers[item.id].isPopupOpen()) {
                 markers[item.id].openPopup();
             }
         } else {
-            // Jika sudah AMAN, tutup popup secara otomatis
             if (markers[item.id].isPopupOpen()) {
                 markers[item.id].closePopup();
             }
         }
-        // -----------------------------
 
         // Efek Visual Pulsing
         const el = markers[item.id].getElement();

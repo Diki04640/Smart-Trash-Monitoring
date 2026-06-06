@@ -1,0 +1,128 @@
+body {
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+  background: #020617;
+  color: #e2e8f0;
+}
+
+.app {
+  padding: 20px;
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+
+/* LIGHT MODE */
+body.light {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+body.light .card,
+body.light .map-box,
+body.light .list-box {
+  background: #ffffff;
+}
+
+body.light .item {
+  background: #f8fafc;
+}
+
+/* STATS */
+.stats {
+  display: flex;
+  gap: 15px;
+  margin: 20px 0;
+}
+
+.card {
+  flex: 1;
+  background: #0f172a;
+  padding: 15px;
+  border-radius: 10px;
+}
+
+.card h2 {
+  margin: 5px 0;
+}
+
+/* MAIN */
+main {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 15px;
+}
+
+.map-box, .list-box {
+  background: #0f172a;
+  padding: 15px;
+  border-radius: 10px;
+}
+
+#map {
+  height: 400px;
+  border-radius: 10px;
+}
+
+/* LIST */
+.item {
+  background: #020617;
+  padding: 10px;
+  margin-bottom: 10px;
+  border-radius: 8px;
+}
+
+/* STATUS */
+.safe-status {
+  border: 2px solid #22c55e;
+}
+
+.full-alert {
+  border: 2px solid #ef4444;
+  animation: blink 1s infinite;
+}
+
+/* Animasi pulsing merah */
+.pulsing-marker {
+    animation: pulse-red 1.5s infinite;
+    border-radius: 50%; /* Supaya shadow melingkar sempurna */
+}
+
+@keyframes pulse-red {
+    0% {
+        stroke-width: 2px;
+        stroke-opacity: 1;
+    }
+    50% {
+        stroke-width: 15px; /* Lingkaran luar menebal */
+        stroke-opacity: 0.3;
+    }
+    100% {
+        stroke-width: 2px;
+        stroke-opacity: 1;
+    }
+}
+@keyframes blink {
+  0% { background: rgba(255,0,0,0.1); }
+  50% { background: rgba(255,0,0,0.3); }
+  100% { background: rgba(255,0,0,0.1); }
+}
+
+/* MOBILE */
+@media (max-width: 768px) {
+  main {
+    grid-template-columns: 1fr;
+  }
+
+  .stats {
+    flex-direction: column;
+  }
+
+  #map {
+    height: 250px;
+  }
+}

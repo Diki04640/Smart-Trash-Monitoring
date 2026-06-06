@@ -1,0 +1,32 @@
+{
+  "name": "smart-trash-monitor",
+  "version": "1.0.0",
+  "description": "Smart Trash Monitoring System with Realtime Dashboard",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "concurrently \"nodemon server.js\" \"browser-sync start --proxy localhost:3000 --files 'public/**/*,server.js'\""
+  },
+  "keywords": [
+    "iot",
+    "smart-trash",
+    "monitoring",
+    "websocket",
+    "realtime"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.22.1",
+    "ws": "^8.20.0"
+  },
+  "devDependencies": {
+    "browser-sync": "^3.0.4",
+    "concurrently": "^9.2.1",
+    "nodemon": "^3.1.14"
+  },
+  "engines": {
+    "node": ">=16"
+  }
+}

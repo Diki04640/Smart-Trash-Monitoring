@@ -170,7 +170,7 @@ function renderList(data) {
         const lokasiText = item.lokasi ? item.lokasi : "Lokasi Tidak Diketahui";
         const locationEl = document.createElement("div");
         locationEl.className = "item-location";
-        locationEl.innerHTML = `📍 <span style="font-weight: 600;">${lokasiText}</span>`;
+        locationEl.innerHTML = `<span style="font-weight: 600;">${lokasiText}</span>`;
         locationEl.style.fontSize = "0.85rem";
         locationEl.style.color = "var(--text-muted, #7f8c8d)";
         locationEl.style.margin = "3px 0";

@@ -64,7 +64,6 @@ function connectWS() {
             } else if (msg.type === "update") {
                 allData[msg.data.id] = msg.data;
             }
-            // 🔥 LANGSUNG PICU RENDER: Begitu data masuk (baik init atau update), langsung hitung status online/offline
             render();
         } catch (err) {
             console.error("Gagal parsing data:", err);
@@ -85,7 +84,7 @@ function connectWS() {
 function render() {
     let data = Object.values(allData);
 
-    // Urutkan berdasarkan ID agar rapi (Tong 1, Tong 2, Tong 3)
+    // Urutkan berdasarkan ID rapi (Tong 1, Tong 2, Tong 3)
     data.sort((a, b) => 
         a.id.localeCompare(b.id, undefined, { numeric: true, sensitivity: 'base' })
     );
@@ -158,7 +157,7 @@ function renderList(data) {
     data.forEach(item => {
         const timeServer = new Date(item.updated_at).getTime();
         const diffSeconds = Math.floor((timeLocal - timeServer) / 1000);
-        // 🔥 VALIDASI: Jika saat web dibuka selisihnya sudah lewat 60 detik, langsung kunci OFFLINE
+        // Validasi: Jika di database umur data Tong 1 lewat dari 60 detik, nyatakan OFFLINE murni
         const isOffline = item.id === "Tong1" && diffSeconds > 60; 
 
         const div = document.createElement("div");
@@ -217,6 +216,7 @@ function formatTimeAgo(timestamp) {
     });
 }
 
+// Render pemetaan peta Leaflet
 function renderMap(data) {
     const timeLocal = new Date().getTime();
 
@@ -285,7 +285,7 @@ window.addEventListener("resize", () => {
     setTimeout(() => map.invalidateSize(), 300);
 });
 
-// 🔥 ENGINE INTERVAL: Terus mengecek status waktu setiap 5 detik di background
+// Engine background checking (Pengecekan konstan tiap 5 detik)
 setInterval(() => {
     render(); 
 }, 5000);

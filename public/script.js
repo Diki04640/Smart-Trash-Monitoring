@@ -158,7 +158,7 @@ function renderList(data) {
         const timeServer = new Date(item.updated_at).getTime();
         const diffSeconds = Math.floor((timeLocal - timeServer) / 1000);
         // Validasi: Jika di database umur data Tong 1 lewat dari 60 detik, nyatakan OFFLINE murni
-        const isOffline = item.id === "Tong1" && diffSeconds > 60; 
+        const isOffline = item.id === "Tong1" && diffSeconds > 0; 
 
         const div = document.createElement("div");
         div.className = "item " + (isOffline ? "offline-alert" : (item.level >= 80 ? "full-alert" : "safe-status"));

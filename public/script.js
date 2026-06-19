@@ -174,7 +174,7 @@ function renderList(data) {
 
         // 🛠️ BERSIH & OPTIMAL: Langsung mencetak jam digital tanpa membebani memori dengan atribut tracker
         const timeText = document.createElement("small");
-        timeText.textContent = "Update: " + formatTimeAgo(item.updated_at);
+        timeText.textContent = "Jam: " + formatTimeAgo(item.updated_at);
 
         info.appendChild(locationEl); 
         info.appendChild(levelText);

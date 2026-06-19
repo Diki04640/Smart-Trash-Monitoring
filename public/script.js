@@ -280,3 +280,7 @@ function renderMap(data) {
 window.addEventListener("resize", () => {
     setTimeout(() => map.invalidateSize(), 300);
 });
+
+setInterval(() => {
+    render();
+}, 3000);

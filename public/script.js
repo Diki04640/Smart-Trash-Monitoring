@@ -152,20 +152,9 @@ function renderList(data) {
     list.innerHTML = "";
 
     data.forEach(item => {
-        // 🌟 LOGIKA BARU: Cek jika data tidak update lebih dari 3 menit (180 detik)
-        const timeServer = new Date(item.updated_at).getTime();
-        const timeLocal = new Date().getTime();
-        const diffSeconds = Math.floor((timeLocal - timeServer) / 1000);
-        const isOffline = diffSeconds > 180; // 180 detik = 3 menit
-
         const div = document.createElement("div");
-        // Jika offline, beri kelas css 'safe-status' saja atau bikin warna netral
-        div.className = "item " + (isOffline ? "offline-status" : (item.level >= 80 ? "full-alert" : "safe-status"));
+        div.className = "item " + (item.level >= 80 ? "full-alert" : "safe-status");
         
-        if (isOffline) {
-            div.style.borderLeft = "5px solid #95a5a6"; // Warna abu-abu penanda offline
-        }
-
         const idLabel = document.createElement("strong");
         idLabel.textContent = 'Id: ' + item.id;
 
@@ -180,15 +169,10 @@ function renderList(data) {
         locationEl.style.margin = "3px 0";
 
         const levelText = document.createElement("div");
-        // 🌟 JIKA OFFLINE, UBAH TEKS MENJADI OFFLINE
-        if (isOffline) {
-            levelText.textContent = `Status: PERANGKAT OFFLINE`;
-            levelText.style.color = "#7f8c8d";
-        } else {
-            levelText.textContent = `Level: ${item.level}%`;
-            levelText.style.fontWeight = "bold";
-        }
+        levelText.textContent = `Level: ${item.level}%`;
+        levelText.style.fontWeight = "bold";
 
+        // 🛠️ BERSIH & OPTIMAL: Langsung mencetak jam digital tanpa membebani memori dengan atribut tracker
         const timeText = document.createElement("small");
         timeText.textContent = "Update: " + formatTimeAgo(item.updated_at);
 
@@ -280,3 +264,12 @@ function renderMap(data) {
 window.addEventListener("resize", () => {
     setTimeout(() => map.invalidateSize(), 300);
 });
+// 🔥 LOGIKA AUTO-DETEKSI PERANGKAT MATI (JALAN TIAP 10 DETIK)
+setInterval(() => {
+    let data = Object.values(allData);
+    if (data.length > 0) {
+        // Picu render ulang jika ada perangkat yang terindikasi melewati batas waktu
+        renderList(data);
+        renderMap(data);
+    }
+}, 10000); // Cek setiap 10 detik

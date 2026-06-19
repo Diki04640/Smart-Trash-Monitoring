@@ -198,15 +198,23 @@ function renderList(data) {
 
 function formatTimeAgo(timestamp) {
     if (!timestamp) return "Data belum masuk";
-    const diff = Math.floor(
-        (Date.now() - new Date(timestamp).getTime()) / 1000
-    );
+    
+    // Konversi waktu kiriman server dan waktu laptop ke milidetik murni (UTC absolute)
+    const timeServer = new Date(timestamp).getTime();
+    const timeLocal = new Date().getTime();
+    
+    // Hitung selisih dalam satuan detik
+    const diff = Math.floor((timeLocal - timeServer) / 1000);
 
+    // Proteksi jika ada selisih delay server beberapa detik (agar tidak minus)
     if (diff < 5) return "Baru saja";
     if (diff < 60) return diff + " detik lalu";
-    if (diff < 3600) return Math.floor(diff / 60) + " menit lalu";
+    
+    const minutes = Math.floor(diff / 60);
+    if (minutes < 60) return minutes + " menit lalu";
 
-    return new Date(timestamp).toLocaleTimeString();
+    // Jika sudah lebih dari 1 jam, tampilkan jam lokal laptop dengan format HH:MM:SS
+    return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 }
 
 function renderMap(data) {

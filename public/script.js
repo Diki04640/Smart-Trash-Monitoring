@@ -64,6 +64,7 @@ function connectWS() {
             } else if (msg.type === "update") {
                 allData[msg.data.id] = msg.data;
             }
+            // 🔥 LANGSUNG PICU RENDER: Begitu data masuk (baik init atau update), langsung hitung status online/offline
             render();
         } catch (err) {
             console.error("Gagal parsing data:", err);
@@ -95,10 +96,9 @@ function render() {
 
     // NOTIFIKASI
     data.forEach(item => {
-        // Cek apakah perangkat offline khusus Tong 1
         const timeServer = new Date(item.updated_at).getTime();
         const timeLocal = new Date().getTime();
-        const isOffline = item.id === "Tong1" && Math.floor((timeLocal - timeServer) / 1000) > 180;
+        const isOffline = item.id === "Tong1" && Math.floor((timeLocal - timeServer) / 1000) > 60;
 
         if (item.level >= 80 && !isOffline) {
             const lokasiText = item.lokasi ? item.lokasi : "Lokasi Tidak Diketahui";
@@ -123,7 +123,6 @@ function renderStats(data) {
     const avgEl = document.getElementById("avg");
     const statusEl = document.getElementById("safe");
 
-    // Statistik hanya menghitung data yang ada di layar
     countEl.innerText = data.length;
     
     const avg = data.length 
@@ -157,13 +156,12 @@ function renderList(data) {
     const timeLocal = new Date().getTime();
 
     data.forEach(item => {
-        // 🔥 LOGIKA KUNCI STATUS OFFLINE: Hanya berlaku jika ID-nya adalah Tong1
         const timeServer = new Date(item.updated_at).getTime();
         const diffSeconds = Math.floor((timeLocal - timeServer) / 1000);
+        // 🔥 VALIDASI: Jika saat web dibuka selisihnya sudah lewat 60 detik, langsung kunci OFFLINE
         const isOffline = item.id === "Tong1" && diffSeconds > 60; 
 
         const div = document.createElement("div");
-        // Jika offline, ubah kelas styling menjadi abu-abu netral
         div.className = "item " + (isOffline ? "offline-alert" : (item.level >= 80 ? "full-alert" : "safe-status"));
         
         if (isOffline) {
@@ -187,10 +185,9 @@ function renderList(data) {
         const levelText = document.createElement("div");
         levelText.style.fontWeight = "bold";
         
-        // 🔥 UBAH TEKS JIKA OFFLINE
         if (isOffline) {
             levelText.textContent = `Status: PERANGKAT OFFLINE`;
-            levelText.style.color = "#95a5a6"; // Warna teks abu-abu tanda mati
+            levelText.style.color = "#95a5a6"; 
         } else {
             levelText.textContent = `Level: ${item.level}%`;
             levelText.style.color = "inherit";
@@ -224,13 +221,10 @@ function renderMap(data) {
     const timeLocal = new Date().getTime();
 
     data.forEach(item => {
-        // 🔥 SINKRONISASI COOLDOWN WARNA MARKER PETA KHUSUS TONG 1
         const timeServer = new Date(item.updated_at).getTime();
-        const isOffline = item.id === "Tong1" && Math.floor((timeLocal - timeServer) / 1000) > 180;
+        const isOffline = item.id === "Tong1" && Math.floor((timeLocal - timeServer) / 1000) > 60;
 
         const isFull = item.level >= 80; 
-        
-        // Pilihan warna penanda: Jika offline = Abu-abu, jika penuh = Merah, jika aman = Hijau
         const color = isOffline ? "#95a5a6" : (isFull ? "#ef4444" : "#22c55e");
         const coords = [item.latitude, item.longitude];
         
@@ -291,7 +285,7 @@ window.addEventListener("resize", () => {
     setTimeout(() => map.invalidateSize(), 300);
 });
 
-// 🔥 ENGINE TIMER: Memaksa pengecekan status detak waktu tiap 5 detik sekali
+// 🔥 ENGINE INTERVAL: Terus mengecek status waktu setiap 5 detik di background
 setInterval(() => {
     render(); 
 }, 5000);

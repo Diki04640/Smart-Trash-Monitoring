@@ -100,21 +100,17 @@ function render() {
     data.forEach(item => {
         const lokasiText = item.lokasi ? item.lokasi : "Lokasi Tidak Diketahui";
         if (item.level >= 80) {
-            // Cek apakah sudah pernah dinotifikasi sebelumnya
             if (!notifiedFull[item.id]) {
                 if (Notification.permission === "granted") {
-                    // === UPDATE: Menyisipkan info lokasi di Push Notification ===
                     const n = new Notification(`${item.id} Penuh!`, {
                         body: `Lokasi: ${lokasiText}\nKapasitas sudah mencapai ${item.level}%`,
                         icon: "https://cdn-icons-png.flaticon.com/512/565/565547.png"
                     });
                     setTimeout(n.close.bind(n), 5000); 
                 }
-                // Tandai sudah dinotifikasi agar tidak muncul terus-menerus
                 notifiedFull[item.id] = true;
             }
         } else {
-            // Agar jika penuh lagi di masa depan, notifikasi bisa muncul kembali.
             notifiedFull[item.id] = false;
         }
     });
@@ -132,14 +128,12 @@ function renderStats(data) {
         : 0;
     avgEl.innerText = avg + "%";
 
-    // Cari tong yang levelnya sudah mencapai ambang batas (>= 80%)
     const fullBins = data.filter(d => d.level >= 80);
 
     if (data.length === 0) {
         statusEl.innerText = "-";
         statusEl.style.color = "gray";
     } else if (fullBins.length > 0) {
-        // Jika ada yang penuh, ambil semua ID-nya dan gabungkan beserta lokasinya
         const infoPenuh = fullBins.map(b => {
             const loc = b.lokasi ? ` (${b.lokasi})` : '';
             return `${b.id}${loc}`;
@@ -166,7 +160,6 @@ function renderList(data) {
 
         const info = document.createElement("div");
 
-        // === UPDATE: Membuat elemen teks lokasi di dalam Card List ===
         const lokasiText = item.lokasi ? item.lokasi : "Lokasi Tidak Diketahui";
         const locationEl = document.createElement("div");
         locationEl.className = "item-location";
@@ -179,13 +172,10 @@ function renderList(data) {
         levelText.textContent = `Level: ${item.level}%`;
         levelText.style.fontWeight = "bold";
 
+        // 🛠️ BERSIH & OPTIMAL: Langsung mencetak jam digital tanpa membebani memori dengan atribut tracker
         const timeText = document.createElement("small");
-        // 🔥 MODIFIKASI: Sematkan tanda kelas dan atribut metadata penampung timestamp mentah
-        timeText.className = "time-ago-tracker";
-        timeText.setAttribute("data-timestamp", item.updated_at);
         timeText.textContent = "Update: " + formatTimeAgo(item.updated_at);
 
-        // Susun elemen info komponen kanan
         info.appendChild(locationEl); 
         info.appendChild(levelText);
         info.appendChild(timeText);
@@ -199,7 +189,7 @@ function renderList(data) {
 function formatTimeAgo(timestamp) {
     if (!timestamp) return "Data belum masuk";
     
-    // Mengonversi string waktu dari server ke format jam lokal (WIB) HH:MM:SS
+    // Mengonversi ISO String Server ke format Jam Digital Lokal (HH:MM:SS) secara presisi
     return new Date(timestamp).toLocaleTimeString('id-ID', { 
         hour: '2-digit', 
         minute: '2-digit', 
@@ -213,7 +203,6 @@ function renderMap(data) {
         const color = isFull ? "#ef4444" : "#22c55e";
         const coords = [item.latitude, item.longitude];
         
-        // === UPDATE: Memasukkan informasi lokasi ke popup Map Leaflet ===
         const lokasiText = item.lokasi ? item.lokasi : "Lokasi Tidak Diketahui";
         const popupContent = `
             <div style="font-family: 'Inter', sans-serif; font-size: 13px; line-height: 1.4;">
@@ -225,7 +214,6 @@ function renderMap(data) {
         `;
 
         if (markers[item.id]) {
-            // Update marker yang sudah ada
             markers[item.id]
                 .setLatLng(coords)
                 .setStyle({ color: color, fillColor: color })
@@ -236,7 +224,6 @@ function renderMap(data) {
             }
         } 
         else {
-            // Buat marker baru jika belum ada
             markers[item.id] = L.circleMarker(coords, {
                 radius: 10,
                 color: color,
@@ -246,7 +233,6 @@ function renderMap(data) {
             }).addTo(map).bindPopup(popupContent);
         }
         
-        // --- LOGIKA POPUP OTOMATIS ---
         if (isFull) {
             if (!markers[item.id].isPopupOpen()) {
                 markers[item.id].openPopup();
@@ -257,7 +243,6 @@ function renderMap(data) {
             }
         }
 
-        // Efek Visual Pulsing
         const el = markers[item.id].getElement();
         if (el) {
             if (isFull) {
@@ -268,7 +253,6 @@ function renderMap(data) {
         }
     });
 
-    // Zoom otomatis pada load pertama
     if (data.length > 0 && isFirstLoad) {
         const bounds = data.map(d => [d.latitude, d.longitude]);
         map.fitBounds(bounds, { padding: [40, 40] });
@@ -276,20 +260,6 @@ function renderMap(data) {
     }
 }
 
-// Handler resize layar
 window.addEventListener("resize", () => {
     setTimeout(() => map.invalidateSize(), 300);
 });
-
-// =========================================================================
-// 🔥 INJEKSI LOGIKA TIMING INTERVAL (AUTO RE-RENDER TIMESTAMP TIAP 1 DETIK)
-// =========================================================================
-//setInterval(() => {
-    const trackerElements = document.querySelectorAll(".time-ago-tracker");
-    trackerElements.forEach(el => {
-        const rawTs = el.getAttribute("data-timestamp");
-        if (rawTs && rawTs !== "undefined" && rawTs !== "null") {
-            el.textContent = "Update: " + formatTimeAgo(rawTs);
-        }
-    });
-}, 300000

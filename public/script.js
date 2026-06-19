@@ -180,6 +180,7 @@ function renderList(data) {
         levelText.style.fontWeight = "bold";
         
         if (isOffline) {
+            levelText.style.border = "1px solid #969e9e";
             levelText.textContent = `Status: PERANGKAT OFFLINE`;
             levelText.style.color = "#95a5a6"; 
         } else {

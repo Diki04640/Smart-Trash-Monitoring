@@ -294,4 +294,4 @@ setInterval(() => {
             el.textContent = "Update: " + formatTimeAgo(rawTs);
         }
     });
-}, 1000);
+}, 60000);

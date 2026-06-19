@@ -82,14 +82,31 @@ main {
 }
 
 .full-alert {
-  border: 2px solid #ef4444;
-  animation: blink 1s infinite;
+    border: 2px solid #ef4444 !important;
+    box-shadow: 0 0 0px rgba(239, 68, 68, 0);
+    animation: smooth-glow 2s infinite ease-in-out;
+    background-color: rgba(239, 68, 68, 0.08) !important; /* Base warna merah transparan pas penuh */
+}
+
+@keyframes smooth-glow {
+    0% {
+        box-shadow: 0 0 4px rgba(239, 68, 68, 0.2);
+        background-color: rgba(239, 68, 68, 0.08);
+    }
+    50% {
+        box-shadow: 0 0 12px rgba(239, 68, 68, 0.5);
+        background-color: rgba(239, 68, 68, 0.18); /* Berpendar halus */
+    }
+    100% {
+        box-shadow: 0 0 4px rgba(239, 68, 68, 0.2);
+        background-color: rgba(239, 68, 68, 0.08);
+    }
 }
 
 /* Animasi pulsing merah */
 .pulsing-marker {
     animation: pulse-red 1.5s infinite;
-    border-radius: 50%; /* Supaya shadow melingkar sempurna */
+    border-radius: 50%;
 }
 
 @keyframes pulse-red {

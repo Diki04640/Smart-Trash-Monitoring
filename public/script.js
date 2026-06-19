@@ -162,11 +162,6 @@ function renderList(data) {
 
         const div = document.createElement("div");
         div.className = "item " + (isOffline ? "offline-alert" : (item.level >= 80 ? "full-alert" : "safe-status"));
-        
-        if (isOffline) {
-            div.style.borderLeft = "5px solid #95a5a6"; 
-            div.style.opacity = "0.65"; 
-        }
 
         const idLabel = document.createElement("strong");
         idLabel.textContent = 'Id: ' + item.id;

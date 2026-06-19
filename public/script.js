@@ -264,3 +264,12 @@ function renderMap(data) {
 window.addEventListener("resize", () => {
     setTimeout(() => map.invalidateSize(), 300);
 });
+// 🔥 LOGIKA AUTO-DETEKSI PERANGKAT MATI (JALAN TIAP 10 DETIK)
+setInterval(() => {
+    let data = Object.values(allData);
+    if (data.length > 0) {
+        // Picu render ulang jika ada perangkat yang terindikasi melewati batas waktu
+        renderList(data);
+        renderMap(data);
+    }
+}, 10000); // Cek setiap 10 detik

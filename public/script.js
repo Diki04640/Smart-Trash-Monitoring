@@ -174,7 +174,7 @@ function renderList(data) {
 
         // 🛠️ BERSIH & OPTIMAL: Langsung mencetak jam digital tanpa membebani memori dengan atribut tracker
         const timeText = document.createElement("small");
-        timeText.textContent = "Jam: " + formatTimeAgo(item.updated_at);
+        timeText.textContent = "Update: " + formatTimeAgo(item.updated_at);
 
         info.appendChild(locationEl); 
         info.appendChild(levelText);
@@ -193,7 +193,8 @@ function formatTimeAgo(timestamp) {
     return new Date(timestamp).toLocaleTimeString('id-ID', { 
         hour: '2-digit', 
         minute: '2-digit', 
-        second: '2-digit' 
+        second: '2-digit',
+        hour12: true
     });
 }
 

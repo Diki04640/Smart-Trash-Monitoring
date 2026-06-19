@@ -5,47 +5,55 @@ let allData = {};
 let notifiedFull = {};
 let isFirstLoad = true;
 
-// Status offline murni mendeteksi apakah websocket terputus/USB dicabut
-let isDeviceOffline = false; 
-
 document.addEventListener("DOMContentLoaded", () => {
+    // 1. Inisialisasi Map Terlebih Dahulu
     map = L.map('map').setView([1.119611, 104.043722], 15);
 
+    // 2. Deteksi & Terapkan Tema
     const systemTheme = window.matchMedia("(prefers-color-scheme: dark)");
+    
     function applyTheme(isDark) {
-        if (isDark) document.body.classList.remove("light");
-        else document.body.classList.add("light");
+        if (isDark) {
+            document.body.classList.remove("light");
+        } else {
+            document.body.classList.add("light");
+        }
         loadMapTheme(isDark);
     }
+
     applyTheme(systemTheme.matches);
     systemTheme.addEventListener("change", (e) => applyTheme(e.matches));
 
+    // 3. Izin Notifikasi
     if ("Notification" in window && Notification.permission !== "granted") {
         Notification.requestPermission();
     }
 
+    // 4. Hubungkan WebSocket
     connectWS();
+
+    // Fix bug layout map
     setTimeout(() => map.invalidateSize(), 800);
 });
 
 function loadMapTheme(isDark) {
-    if (tileLayer && map.hasLayer(tileLayer)) map.removeLayer(tileLayer);
+    if (tileLayer && map.hasLayer(tileLayer)) {
+        map.removeLayer(tileLayer);
+    }
+
     const url = isDark
         ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
         : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-    tileLayer = L.tileLayer(url, { attribution: '&copy; OpenStreetMap contributors' }).addTo(map);
+
+    tileLayer = L.tileLayer(url, {
+        attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
 }
 
 function connectWS() {
     const protocol = window.location.protocol === "https:" ? "wss" : "ws";
     const wsUrl = `${protocol}://${window.location.host}`;
     const ws = new WebSocket(wsUrl);
-
-    ws.onopen = () => {
-        // Begitu tersambung, set status perangkat langsung ONLINE
-        isDeviceOffline = false;
-        render();
-    };
 
     ws.onmessage = (event) => {
         try {
@@ -63,11 +71,8 @@ function connectWS() {
     };
 
     ws.onclose = () => {
-        console.warn("WebSocket putus (USB Dicabut / Koneksi Hilang).");
-        //Ketika USB dicabut, WebSocket close dipicu, set ke OFFLINE
-        isDeviceOffline = true;
-        render();
-        setTimeout(connectWS, 3000); // Coba hubungkan kembali
+        console.warn("WebSocket putus. Mencoba menyambung kembali...");
+        setTimeout(connectWS, 3000);
     };
 
     ws.onerror = (err) => {
@@ -78,15 +83,22 @@ function connectWS() {
 
 function render() {
     let data = Object.values(allData);
-    data.sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric: true, sensitivity: 'base' }));
+
+    // Urutkan berdasarkan ID rapi (Tong 1, Tong 2, Tong 3)
+    data.sort((a, b) => 
+        a.id.localeCompare(b.id, undefined, { numeric: true, sensitivity: 'base' })
+    );
 
     renderStats(data);
     renderList(data);
     renderMap(data);
 
-    // LOGIKA NOTIFIKASI
+    // NOTIFIKASI
     data.forEach(item => {
-        const isOffline = item.id === "Tong1" && isDeviceOffline;
+        const timeServer = new Date(item.updated_at).getTime();
+        const timeLocal = new Date().getTime();
+        const isOffline = item.id === "Tong1" && Math.floor((timeLocal - timeServer) / 1000) > 60;
+
         if (item.level >= 80 && !isOffline) {
             const lokasiText = item.lokasi ? item.lokasi : "Lokasi Tidak Diketahui";
             if (!notifiedFull[item.id]) {
@@ -111,15 +123,23 @@ function renderStats(data) {
     const statusEl = document.getElementById("safe");
 
     countEl.innerText = data.length;
-    const avg = data.length ? Math.round(data.reduce((a, b) => a + b.level, 0) / data.length) : 0;
+    
+    const avg = data.length 
+        ? Math.round(data.reduce((a, b) => a + b.level, 0) / data.length) 
+        : 0;
     avgEl.innerText = avg + "%";
 
     const fullBins = data.filter(d => d.level >= 80);
+
     if (data.length === 0) {
         statusEl.innerText = "-";
         statusEl.style.color = "gray";
-    } else if (fullBins.length > 0 && !(allData["Tong1"] && isDeviceOffline)) {
-        const infoPenuh = fullBins.map(b => `${b.id} (${b.lokasi || '?'})`).join(", ");
+    } else if (fullBins.length > 0) {
+        const infoPenuh = fullBins.map(b => {
+            const loc = b.lokasi ? ` (${b.lokasi})` : '';
+            return `${b.id}${loc}`;
+        }).join(", ");
+        
         statusEl.innerText = `${infoPenuh} PENUH`; 
         statusEl.style.color = "#ef4444";
     } else {
@@ -132,33 +152,23 @@ function renderList(data) {
     const list = document.getElementById("list");
     list.innerHTML = "";
 
+    const timeLocal = new Date().getTime();
+
     data.forEach(item => {
-        //Logika Offline
-        const isOffline = item.id === "Tong1" && isDeviceOffline; 
+        const timeServer = new Date(item.updated_at).getTime();
+        const diffSeconds = Math.floor((timeLocal - timeServer) / 1000);
+        // Validasi: Jika di database umur data Tong 1 lewat dari 30 detik, nyatakan OFFLINE murni
+        const isOffline = item.id === "Tong1" && diffSeconds > 30; 
 
         const div = document.createElement("div");
         div.className = "item " + (isOffline ? "offline-alert" : (item.level >= 80 ? "full-alert" : "safe-status"));
-        
-        // Desain border penuh keliling kotak status
-        if (isOffline) {
-            div.style.border = "1.5px solid #95a5a6"; 
-            div.style.backgroundColor = "rgba(149, 165, 166, 0.08)";
-            div.style.opacity = "0.65"; 
-            div.style.boxShadow = "none";
-        } else if (item.level >= 80) {
-            div.style.border = "1.5px solid #ef4444"; 
-        } else {
-            div.style.border = "1.5px solid #22c55e"; 
-            div.style.backgroundColor = "rgba(34, 197, 94, 0.05)";
-            div.style.boxShadow = "none";
-        }
 
         const idLabel = document.createElement("strong");
         idLabel.textContent = 'Id: ' + item.id;
 
         const info = document.createElement("div");
+
         const lokasiText = item.lokasi ? item.lokasi : "Lokasi Tidak Diketahui";
-        
         const locationEl = document.createElement("div");
         locationEl.className = "item-location";
         locationEl.innerHTML = `<span style="font-weight: 600;">${lokasiText}</span>`;
@@ -170,6 +180,7 @@ function renderList(data) {
         levelText.style.fontWeight = "bold";
         
         if (isOffline) {
+            div.style.border = "2px solid #969e9e";
             levelText.textContent = `Status: PERANGKAT OFFLINE`;
             levelText.style.color = "#95a5a6"; 
         } else {
@@ -177,7 +188,6 @@ function renderList(data) {
             levelText.style.color = "inherit";
         }
 
-        //JAM UPDATE
         const timeText = document.createElement("small");
         timeText.textContent = "Update: " + formatTimeAgo(item.updated_at);
 
@@ -193,16 +203,24 @@ function renderList(data) {
 
 function formatTimeAgo(timestamp) {
     if (!timestamp) return "Data belum masuk";
+    
     return new Date(timestamp).toLocaleTimeString('en-US', { 
-        hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true
+        hour: '2-digit', 
+        minute: '2-digit', 
+        second: '2-digit',
+        hour12: true
     });
 }
 
+// Render pemetaan peta Leaflet
 function renderMap(data) {
+    const timeLocal = new Date().getTime();
+
     data.forEach(item => {
-        const isOffline = item.id === "Tong1" && isDeviceOffline;
+        const timeServer = new Date(item.updated_at).getTime();
+        const isOffline = item.id === "Tong1" && Math.floor((timeLocal - timeServer) / 1000) > 30;
+
         const isFull = item.level >= 80; 
-        
         const color = isOffline ? "#95a5a6" : (isFull ? "#ef4444" : "#22c55e");
         const coords = [item.latitude, item.longitude];
         
@@ -225,16 +243,18 @@ function renderMap(data) {
             if (item.id === "Tong1" && !isOffline) {
                 map.panTo(coords, { animate: true });
             }
-        } else {
+        } 
+        else {
             markers[item.id] = L.circleMarker(coords, {
-                radius: 10, color: color, fillColor: color, fillOpacity: 0.8, weight: 2
+                radius: 10,
+                color: color,
+                fillColor: color,
+                fillOpacity: 0.8,
+                weight: 2
             }).addTo(map).bindPopup(popupContent);
         }
         
-        // Kontrol Buka/Tutup Pop-up Peta
-        if (isOffline) {
-            if (markers[item.id].isPopupOpen()) markers[item.id].closePopup();
-        } else if (isFull) {
+        if (isFull && !isOffline) {
             if (!markers[item.id].isPopupOpen()) markers[item.id].openPopup();
         } else {
             if (markers[item.id].isPopupOpen()) markers[item.id].closePopup();
@@ -243,7 +263,7 @@ function renderMap(data) {
         const el = markers[item.id].getElement();
         if (el) {
             if (isFull && !isOffline) {
-                if (!el.classList.contains("pulsing-marker")) el.classList.add("pulsing-marker");
+                el.classList.add("pulsing-marker");
             } else {
                 el.classList.remove("pulsing-marker");
             }

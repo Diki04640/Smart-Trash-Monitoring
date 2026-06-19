@@ -180,10 +180,13 @@ function renderList(data) {
         levelText.style.fontWeight = "bold";
 
         const timeText = document.createElement("small");
+        // 🔥 MODIFIKASI: Sematkan tanda kelas dan atribut metadata penampung timestamp mentah
+        timeText.className = "time-ago-tracker";
+        timeText.setAttribute("data-timestamp", item.updated_at);
         timeText.textContent = "Update: " + formatTimeAgo(item.updated_at);
 
         // Susun elemen info komponen kanan
-        info.appendChild(locationEl); // Masukkan lokasi ke dalam card
+        info.appendChild(locationEl); 
         info.appendChild(levelText);
         info.appendChild(timeText);
 
@@ -279,3 +282,16 @@ function renderMap(data) {
 window.addEventListener("resize", () => {
     setTimeout(() => map.invalidateSize(), 300);
 });
+
+// =========================================================================
+// 🔥 INJEKSI LOGIKA TIMING INTERVAL (AUTO RE-RENDER TIMESTAMP TIAP 1 DETIK)
+// =========================================================================
+setInterval(() => {
+    const trackerElements = document.querySelectorAll(".time-ago-tracker");
+    trackerElements.forEach(el => {
+        const rawTs = el.getAttribute("data-timestamp");
+        if (rawTs && rawTs !== "undefined" && rawTs !== "null") {
+            el.textContent = "Update: " + formatTimeAgo(rawTs);
+        }
+    });
+}, 1000);

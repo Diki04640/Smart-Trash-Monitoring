@@ -157,7 +157,7 @@ function renderList(data) {
     data.forEach(item => {
         const timeServer = new Date(item.updated_at).getTime();
         const diffSeconds = Math.floor((timeLocal - timeServer) / 1000);
-        // Validasi: Jika di database umur data Tong 1 lewat dari 60 detik, nyatakan OFFLINE murni
+        // Validasi: Jika di database umur data Tong 1 lewat dari 30 detik, nyatakan OFFLINE murni
         const isOffline = item.id === "Tong1" && diffSeconds > 30; 
 
         const div = document.createElement("div");
@@ -217,7 +217,7 @@ function renderMap(data) {
 
     data.forEach(item => {
         const timeServer = new Date(item.updated_at).getTime();
-        const isOffline = item.id === "Tong1" && Math.floor((timeLocal - timeServer) / 1000) > 60;
+        const isOffline = item.id === "Tong1" && Math.floor((timeLocal - timeServer) / 1000) > 30;
 
         const isFull = item.level >= 80; 
         const color = isOffline ? "#95a5a6" : (isFull ? "#ef4444" : "#22c55e");

@@ -199,22 +199,12 @@ function renderList(data) {
 function formatTimeAgo(timestamp) {
     if (!timestamp) return "Data belum masuk";
     
-    // Konversi waktu kiriman server dan waktu laptop ke milidetik murni (UTC absolute)
-    const timeServer = new Date(timestamp).getTime();
-    const timeLocal = new Date().getTime();
-    
-    // Hitung selisih dalam satuan detik
-    const diff = Math.floor((timeLocal - timeServer) / 1000);
-
-    // Proteksi jika ada selisih delay server beberapa detik (agar tidak minus)
-    if (diff < 5) return "Baru saja";
-    if (diff < 60) return diff + " detik lalu";
-    
-    const minutes = Math.floor(diff / 60);
-    if (minutes < 60) return minutes + " menit lalu";
-
-    // Jika sudah lebih dari 1 jam, tampilkan jam lokal laptop dengan format HH:MM:SS
-    return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    // Mengonversi string waktu dari server ke format jam lokal (WIB) HH:MM:SS
+    return new Date(timestamp).toLocaleTimeString('id-ID', { 
+        hour: '2-digit', 
+        minute: '2-digit', 
+        second: '2-digit' 
+    });
 }
 
 function renderMap(data) {
@@ -294,7 +284,7 @@ window.addEventListener("resize", () => {
 // =========================================================================
 // 🔥 INJEKSI LOGIKA TIMING INTERVAL (AUTO RE-RENDER TIMESTAMP TIAP 1 DETIK)
 // =========================================================================
-setInterval(() => {
+//setInterval(() => {
     const trackerElements = document.querySelectorAll(".time-ago-tracker");
     trackerElements.forEach(el => {
         const rawTs = el.getAttribute("data-timestamp");
@@ -302,4 +292,4 @@ setInterval(() => {
             el.textContent = "Update: " + formatTimeAgo(rawTs);
         }
     });
-}, 300000);
+}, 300000

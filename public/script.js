@@ -95,9 +95,8 @@ function render() {
 
     // NOTIFIKASI
     data.forEach(item => {
-        const timeServer = new Date(item.updated_at).getTime();
-        const timeLocal = new Date().getTime();
-        const isOffline = item.id === "Tong1" && Math.floor((timeLocal - timeServer) / 1000) > 60;
+        // 🔥 STATUS DIKONTROL SERVER SECARA EVENT-DRIVEN
+        const isOffline = item.status === "offline";
 
         if (item.level >= 80 && !isOffline) {
             const lokasiText = item.lokasi ? item.lokasi : "Lokasi Tidak Diketahui";
@@ -129,7 +128,8 @@ function renderStats(data) {
         : 0;
     avgEl.innerText = avg + "%";
 
-    const fullBins = data.filter(d => d.level >= 80);
+    // Cari tong penuh yang posisinya tidak sedang offline
+    const fullBins = data.filter(d => d.level >= 80 && d.status !== "offline");
 
     if (data.length === 0) {
         statusEl.innerText = "-";
@@ -152,13 +152,9 @@ function renderList(data) {
     const list = document.getElementById("list");
     list.innerHTML = "";
 
-    const timeLocal = new Date().getTime();
-
     data.forEach(item => {
-        const timeServer = new Date(item.updated_at).getTime();
-        const diffSeconds = Math.floor((timeLocal - timeServer) / 1000);
-        // Validasi: Jika di database umur data Tong 1 lewat dari 30 detik, nyatakan OFFLINE murni
-        const isOffline = item.id === "Tong1" && diffSeconds > 30; 
+        // 🔥 Baca langsung parameter status "offline" kiriman server
+        const isOffline = item.status === "offline"; 
 
         const div = document.createElement("div");
         div.className = "item " + (isOffline ? "offline-alert" : (item.level >= 80 ? "full-alert" : "safe-status"));
@@ -184,10 +180,13 @@ function renderList(data) {
             levelText.textContent = `Status: PERANGKAT OFFLINE`;
             levelText.style.color = "#95a5a6"; 
         } else {
+            // Berikan border dinamis jika online
+            div.style.border = item.level >= 80 ? "2px solid #ef4444" : "2px solid #22c55e";
             levelText.textContent = `Level: ${item.level}%`;
             levelText.style.color = "inherit";
         }
 
+        // Jam ter-lock aman sesuai waktu real data masuk database tanpa terpengaruh putaran detik browser
         const timeText = document.createElement("small");
         timeText.textContent = "Update: " + formatTimeAgo(item.updated_at);
 
@@ -212,14 +211,9 @@ function formatTimeAgo(timestamp) {
     });
 }
 
-// Render pemetaan peta Leaflet
 function renderMap(data) {
-    const timeLocal = new Date().getTime();
-
     data.forEach(item => {
-        const timeServer = new Date(item.updated_at).getTime();
-        const isOffline = item.id === "Tong1" && Math.floor((timeLocal - timeServer) / 1000) > 30;
-
+        const isOffline = item.status === "offline";
         const isFull = item.level >= 80; 
         const color = isOffline ? "#95a5a6" : (isFull ? "#ef4444" : "#22c55e");
         const coords = [item.latitude, item.longitude];
@@ -280,7 +274,3 @@ function renderMap(data) {
 window.addEventListener("resize", () => {
     setTimeout(() => map.invalidateSize(), 300);
 });
-
-setInterval(() => {
-    render();
-}, 3000);

@@ -175,7 +175,7 @@ server.on('error', (error) => {
   if (error.code === 'EADDRINUSE') {
     console.log(`Port ${port} sudah terpakai!`);
     port = port + 1;
-    console.log(`🔄 Mencoba port ${port}...`);
+    console.log(`Mencoba port ${port}...`);
     setTimeout(() => {
       const retry = app.listen(port, '0.0.0.0', () => {
         console.log(`Server berhasil di port ${port}`);

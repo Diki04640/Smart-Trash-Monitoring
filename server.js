@@ -145,7 +145,7 @@ setInterval(() => {
   const waktuSekarang = new Date().getTime();
 
   Object.values(statusStore).forEach(item => {
-    // ⚠️ KUNCI UTAMA: Hanya lakukan pengecekan offline jika ID-nya adalah "Tong1"
+    // KUNCI UTAMA: Hanya lakukan pengecekan offline jika ID-nya adalah "Tong1"
     // Tong2 dan Tong3 (data dummy) akan dilewati dan statusnya tetap "online"
     if (item.id === "Tong1") {
       const waktuDataServer = new Date(item.updated_at).getTime();

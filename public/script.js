@@ -6,10 +6,9 @@ let notifiedFull = {};
 let isFirstLoad = true;
 
 document.addEventListener("DOMContentLoaded", () => {
-    // 1. Inisialisasi Map Terlebih Dahulu
+    
     map = L.map('map').setView([1.119611, 104.043722], 15);
 
-    // 2. Deteksi & Terapkan Tema
     const systemTheme = window.matchMedia("(prefers-color-scheme: dark)");
     
     function applyTheme(isDark) {
@@ -24,15 +23,12 @@ document.addEventListener("DOMContentLoaded", () => {
     applyTheme(systemTheme.matches);
     systemTheme.addEventListener("change", (e) => applyTheme(e.matches));
 
-    // 3. Izin Notifikasi
     if ("Notification" in window && Notification.permission !== "granted") {
         Notification.requestPermission();
     }
 
-    // 4. Hubungkan WebSocket
     connectWS();
 
-    // Fix bug layout map
     setTimeout(() => map.invalidateSize(), 800);
 });
 
@@ -84,7 +80,6 @@ function connectWS() {
 function render() {
     let data = Object.values(allData);
 
-    // Urutkan berdasarkan ID rapi (Tong 1, Tong 2, Tong 3)
     data.sort((a, b) => 
         a.id.localeCompare(b.id, undefined, { numeric: true, sensitivity: 'base' })
     );
@@ -93,9 +88,7 @@ function render() {
     renderList(data);
     renderMap(data);
 
-    // NOTIFIKASI
     data.forEach(item => {
-        // 🔥 STATUS DIKONTROL SERVER SECARA EVENT-DRIVEN
         const isOffline = item.status === "offline";
 
         if (item.level >= 80 && !isOffline) {
@@ -128,7 +121,6 @@ function renderStats(data) {
         : 0;
     avgEl.innerText = avg + "%";
 
-    // Cari tong penuh yang posisinya tidak sedang offline
     const fullBins = data.filter(d => d.level >= 80 && d.status !== "offline");
 
     if (data.length === 0) {
@@ -153,7 +145,6 @@ function renderList(data) {
     list.innerHTML = "";
 
     data.forEach(item => {
-        // 🔥 Baca langsung parameter status "offline" kiriman server
         const isOffline = item.status === "offline"; 
 
         const div = document.createElement("div");
@@ -180,13 +171,11 @@ function renderList(data) {
             levelText.textContent = `Status: PERANGKAT OFFLINE`;
             levelText.style.color = "#95a5a6"; 
         } else {
-            // Berikan border dinamis jika online
             div.style.border = item.level >= 80 ? "2px solid #ef4444" : "2px solid #22c55e";
             levelText.textContent = `Level: ${item.level}%`;
             levelText.style.color = "inherit";
         }
 
-        // Jam ter-lock aman sesuai waktu real data masuk database tanpa terpengaruh putaran detik browser
         const timeText = document.createElement("small");
         timeText.textContent = "Update: " + formatTimeAgo(item.updated_at);
 

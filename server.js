@@ -12,7 +12,6 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// === UPDATE: Menambahkan properti "status: 'online'" pada inisialisasi default data ===
 const statusStore = {
   "Tong1": { id: "Tong1", lokasi: "Kost Mitra", latitude: 1.119611, longitude: 104.043722, level: 0, status: "online", updated_at: new Date().toISOString() },
   "Tong2": { id: "Tong2", lokasi: "Gedung A Lantai 1", latitude: 1.120500, longitude: 104.044500, level: 30, status: "online", updated_at: new Date().toISOString() },
@@ -22,7 +21,6 @@ const statusStore = {
 const MAX_ITEMS = 100;
 let wsConnectedClients = new Set();
 
-// GET semua status
 app.get('/api/status', (req, res) => {
   try {
     const data = Object.values(statusStore).sort((a, b) => 
@@ -35,7 +33,6 @@ app.get('/api/status', (req, res) => {
   }
 });
 
-// POST single data atau array
 app.post('/api/status', (req, res) => {
   try {
     const payload = Array.isArray(req.body) ? req.body : [req.body];
@@ -55,17 +52,16 @@ app.post('/api/status', (req, res) => {
         latitude: (lat && lat !== 0) ? lat : 1.119611,
         longitude: (lng && lng !== 0) ? lng : 104.043722,
         level: Number.isFinite(level) ? Math.max(0, Math.min(100, Math.round(level))) : 0,
-        status: "online", // 🔥 UPDATE: Setiap kali ESP mengirim data, status dipaksa kembali ONLINE
+        status: "online",
         updated_at: new Date().toISOString()
       };
 
-      // Simpan ke memory
+
       statusStore[record.id] = record;
       results.push(record);
 
       console.log(`[${record.updated_at}] ${record.id} (${record.lokasi}): Lvl ${record.level}% | Pos: ${record.latitude}, ${record.longitude} | Status: ${record.status}`);
       
-      // Kirim ke Dashboard secara Real-time via WebSocket
       broadcastUpdate(record);
     });
 
@@ -76,7 +72,7 @@ app.post('/api/status', (req, res) => {
   }
 });
 
-// Broadcast update ke semua connected clients
+
 function broadcastUpdate(record) {
   const message = JSON.stringify({
     type: 'update',
@@ -93,7 +89,6 @@ function broadcastUpdate(record) {
   });
 }
 
-// Health check
 app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'ok', 
@@ -102,28 +97,23 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Serve dashboard
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Error handler
 app.use((err, req, res, next) => {
   console.error('Server error:', err);
   res.status(500).json({ error: 'Server error' });
 });
 
-// Create HTTP server
 const server = http.createServer(app);
 
-// Setup WebSocket server
 const wss = new WebSocket.Server({ server });
 
 wss.on('connection', (ws) => {
   console.log('Client WebSocket connected. Total clients:', wsConnectedClients.size + 1);
   wsConnectedClients.add(ws);
 
-  // Send initial data
   const initialData = Object.values(statusStore).sort((a, b) => 
     new Date(b.updated_at) - new Date(a.updated_at)
   );
@@ -145,33 +135,31 @@ wss.on('connection', (ws) => {
   });
 });
 
-// START SERVER
 server.listen(port, '0.0.0.0', () => {
   console.log(`\n╔════════════════════════════════════════════════╗`);
   console.log(`║      Smart Trash Monitor - Server Ready        ║`);
   console.log(`╚════════════════════════════════════════════════╝\n`);
 });
 
-// ====================================================================
-// 🔥 ENGINE BACKGROUND CHECKER UTAMA (SISI SERVER)
-// ====================================================================
-// Mengecek umur kiriman data terakhir dari alat setiap 4 detik.
-// Jika lewat dari 30 detik tidak kirim data, set OFFLINE dan broadcast ke web dashboard.
 setInterval(() => {
   const waktuSekarang = new Date().getTime();
 
   Object.values(statusStore).forEach(item => {
-    const waktuDataServer = new Date(item.updated_at).getTime();
-    const selisihDetik = Math.floor((waktuSekarang - waktuDataServer) / 1000);
+    // ⚠️ KUNCI UTAMA: Hanya lakukan pengecekan offline jika ID-nya adalah "Tong1"
+    // Tong2 dan Tong3 (data dummy) akan dilewati dan statusnya tetap "online"
+    if (item.id === "Tong1") {
+      const waktuDataServer = new Date(item.updated_at).getTime();
+      const selisihDetik = Math.floor((waktuSekarang - waktuDataServer) / 1000);
 
-    // Filter: Hanya berlaku jika terdeteksi mati lewat 30 detik DAN status di server belum offline
-    if (selisihDetik > 30 && item.status !== "offline") {
-      item.status = "offline"; // Ubah status data di memori server menjadi offline
+      // Jika Tong1 tidak mengirim data lebih dari 30 detik DAN statusnya belum offline
+      if (selisihDetik > 30 && item.status !== "offline") {
+        item.status = "offline"; 
 
-      console.log(`[ALERT] Perangkat ${item.id} mati/dicabut selama ${selisihDetik} detik. Menyiarkan status OFFLINE.`);
-      
-      // Mengirim data perubahan offline ke browser secara real-time via WebSocket
-      broadcastUpdate(item);
+        console.log(`[ALERT] Perangkat ${item.id} (Murni IoT) mati/dicabut selama ${selisihDetik} detik. Menyiarkan status OFFLINE.`);
+        
+        // Siarkan status offline Tong1 ke dashboard browser
+        broadcastUpdate(item);
+      }
     }
   });
 }, 4000);

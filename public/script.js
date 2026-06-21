@@ -259,7 +259,7 @@ function renderMap(data) {
         isFirstLoad = false;
     }
 }
-
+// Memastikan peta tetap responsif saat ukuran jendela berubah
 window.addEventListener("resize", () => {
     setTimeout(() => map.invalidateSize(), 300);
 });

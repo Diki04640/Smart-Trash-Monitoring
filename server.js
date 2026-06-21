@@ -12,11 +12,11 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// === UPDATE: Menambahkan properti "lokasi" pada inisialisasi default data ===
+// === UPDATE: Menambahkan properti "status: 'online'" pada inisialisasi default data ===
 const statusStore = {
-  "Tong1": { id: "Tong1", lokasi: "Kost Mitra", latitude: 1.119611, longitude: 104.043722, level: 0, updated_at: new Date().toISOString() },
-  "Tong2": { id: "Tong2", lokasi: "Gedung A Lantai 1", latitude: 1.120500, longitude: 104.044500, level: 30, updated_at: new Date().toISOString() },
-  "Tong3": { id: "Tong3", lokasi: "Gedung B Parkiran", latitude: 1.118500, longitude: 104.042500, level: 50, updated_at: new Date().toISOString() }
+  "Tong1": { id: "Tong1", lokasi: "Kost Mitra", latitude: 1.119611, longitude: 104.043722, level: 0, status: "online", updated_at: new Date().toISOString() },
+  "Tong2": { id: "Tong2", lokasi: "Gedung A Lantai 1", latitude: 1.120500, longitude: 104.044500, level: 30, status: "online", updated_at: new Date().toISOString() },
+  "Tong3": { id: "Tong3", lokasi: "Gedung B Parkiran", latitude: 1.118500, longitude: 104.042500, level: 50, status: "online", updated_at: new Date().toISOString() }
 };
 
 const MAX_ITEMS = 100;
@@ -42,22 +42,20 @@ app.post('/api/status', (req, res) => {
     const results = [];
 
     payload.forEach(item => {
-      // === UPDATE: Destructuring mengambil 'lokasi' dari ESP8266 ===
       const { id, lokasi, latitude, longitude, level } = item;
 
       if (!id) return;
 
-      // koordinat 
       const lat = parseFloat(latitude);
       const lng = parseFloat(longitude);
 
       const record = {
         id: String(id).trim(),
-        // === UPDATE: Validasi jika nama lokasi kosong, berikan teks default ===
         lokasi: lokasi ? String(lokasi).trim() : "Lokasi Tidak Diketahui",
         latitude: (lat && lat !== 0) ? lat : 1.119611,
         longitude: (lng && lng !== 0) ? lng : 104.043722,
         level: Number.isFinite(level) ? Math.max(0, Math.min(100, Math.round(level))) : 0,
+        status: "online", // 🔥 UPDATE: Setiap kali ESP mengirim data, status dipaksa kembali ONLINE
         updated_at: new Date().toISOString()
       };
 
@@ -65,8 +63,7 @@ app.post('/api/status', (req, res) => {
       statusStore[record.id] = record;
       results.push(record);
 
-      // === UPDATE: Menampilkan nama lokasi di log console server ===
-      console.log(`[${record.updated_at}] ${record.id} (${record.lokasi}): Lvl ${record.level}% | Pos: ${record.latitude}, ${record.longitude}`);
+      console.log(`[${record.updated_at}] ${record.id} (${record.lokasi}): Lvl ${record.level}% | Pos: ${record.latitude}, ${record.longitude} | Status: ${record.status}`);
       
       // Kirim ke Dashboard secara Real-time via WebSocket
       broadcastUpdate(record);
@@ -148,12 +145,36 @@ wss.on('connection', (ws) => {
   });
 });
 
-// Start server
+// START SERVER
 server.listen(port, '0.0.0.0', () => {
   console.log(`\n╔════════════════════════════════════════════════╗`);
-  console.log(`║     Smart Trash Monitor - Server Ready        ║`);
+  console.log(`║      Smart Trash Monitor - Server Ready        ║`);
   console.log(`╚════════════════════════════════════════════════╝\n`);
 });
+
+// ====================================================================
+// 🔥 ENGINE BACKGROUND CHECKER UTAMA (SISI SERVER)
+// ====================================================================
+// Mengecek umur kiriman data terakhir dari alat setiap 4 detik.
+// Jika lewat dari 30 detik tidak kirim data, set OFFLINE dan broadcast ke web dashboard.
+setInterval(() => {
+  const waktuSekarang = new Date().getTime();
+
+  Object.values(statusStore).forEach(item => {
+    const waktuDataServer = new Date(item.updated_at).getTime();
+    const selisihDetik = Math.floor((waktuSekarang - waktuDataServer) / 1000);
+
+    // Filter: Hanya berlaku jika terdeteksi mati lewat 30 detik DAN status di server belum offline
+    if (selisihDetik > 30 && item.status !== "offline") {
+      item.status = "offline"; // Ubah status data di memori server menjadi offline
+
+      console.log(`[ALERT] Perangkat ${item.id} mati/dicabut selama ${selisihDetik} detik. Menyiarkan status OFFLINE.`);
+      
+      // Mengirim data perubahan offline ke browser secara real-time via WebSocket
+      broadcastUpdate(item);
+    }
+  });
+}, 4000);
 
 process.on('SIGINT', () => {
   console.log('\n\n Server shutting down...');
